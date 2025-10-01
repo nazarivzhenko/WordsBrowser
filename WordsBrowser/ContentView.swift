@@ -1,21 +1,20 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var words: [Word] = []
     @State private var wordText: String = ""
     @State private var isSearching: Bool = false
     @FocusState private var isFocused: Bool
-    
-    let wordsData = WordsData()
+    @EnvironmentObject private var storeProvider: StoreProvider
+    private let wordsData = WordsData()
     
     var body: some View {
         NavigationStack {
             List {
-                if !words.isEmpty {
+                if !storeProvider.words.isEmpty {
                     Section {
-                        ForEach(words, id: \.word) { word in
-                            NavigationLink(destination: WordDetailView(word: word)) {
-                                Text(word.word)
+                        ForEach(storeProvider.words, id: \.word) { wordEntity in
+                            NavigationLink(destination: WordDetailView(wordEntity: wordEntity)) {
+                                Text(wordEntity.word)
                             }
                         }
                     } header: {
@@ -63,11 +62,11 @@ struct ContentView: View {
             .navigationTitle("Words")
         }
         .task {
-            do {
-                words = try await wordsData.fetchWords()
-            } catch {
-                print("Error fetching words: \(error.localizedDescription)")
-            }
+            try? await Task.sleep(for: .seconds(0.15))
+            isFocused = true
+        }
+        .onAppear {
+            storeProvider.fetchAllWords()
         }
     }
     
@@ -79,14 +78,23 @@ struct ContentView: View {
                 
                 try await Task.sleep(for: .seconds(0.5))
                 
-                withAnimation {
-                    words.insert(word, at: 0)
-                    wordText.removeAll()
-                    isSearching = false
-                    isFocused = false
+                storeProvider.saveWord(word.word, pronunciation: word.pronunciation.all)
+                word.results.forEach { resultElement in
+                    storeProvider.saveDefinition(
+                        resultElement.definition,
+                        partOfSpeech: resultElement.partOfSpeech,
+                        for: word.word
+                    )
                 }
+                storeProvider.fetchAllWords()
             } catch {
                 print("Error fetching word: \(error.localizedDescription)")
+            }
+            
+            withAnimation {
+                wordText.removeAll()
+                isSearching = false
+                isFocused = false
             }
         }
     }
@@ -94,4 +102,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(StoreProvider.preview)
 }

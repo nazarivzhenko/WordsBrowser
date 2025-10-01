@@ -41,5 +41,14 @@ extension Word {
               ],
             pronunciation: .init(all: "'lumənəs")
         ),
+        .init(
+            word: "striking",
+            results: [
+                ResultElement(definition: "sensational in appearance or thrilling in effect",
+                              partOfSpeech: "adjective"),
+                ResultElement(definition: "having a quality that thrusts itself into attention",
+                              partOfSpeech: "adjective")
+            ], pronunciation: .init(all: "'straɪkɪŋ")
+        ),
     ]
 }

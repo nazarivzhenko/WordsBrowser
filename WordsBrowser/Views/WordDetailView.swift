@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct WordDetailView: View {
-    let word: Word
+    let wordEntity: WordEntity
     let wordsData = WordsData()
+    
+    @EnvironmentObject private var storeProvider: StoreProvider
     
     private enum Mode: String, Identifiable, CaseIterable {
         var id: Self { self }
@@ -13,12 +15,15 @@ struct WordDetailView: View {
     }
     
     @State private var currentMode: Mode = .definition
+    @State private var word: String = ""
+    @State private var pronunciation: String = ""
+    @State private var definitions: [Definition] = []
     @State private var synonyms: [String] = []
     @State private var examples: [String] = []
     
     var body: some View {
         VStack(alignment: .leading) {
-            Text(word.word)
+            Text(word)
                 .font(.title2)
                 .fontWeight(.medium)
                 .padding(.horizontal)
@@ -27,7 +32,7 @@ struct WordDetailView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.blue.opacity(0.9), lineWidth: 1)
                 }
-            Text(word.pronunciation.all)
+            Text(pronunciation)
                 .font(.caption)
                 .foregroundStyle(.gray.opacity(0.7))
             DetailsPickerView(
@@ -41,18 +46,18 @@ struct WordDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     switch currentMode {
                     case .definition:
-                        WordDefinitionsView(word: word)
+                        WordDefinitionsView(definitions: definitions)
                     case .synomyms:
                         if !synonyms.isEmpty {
                             DetailsListView(elements: synonyms)
                         } else {
-                            Text("No synonyms found 😔")
+                            emptyText("synonyms")
                         }
                     case .examples:
                         if !examples.isEmpty {
                             DetailsListView(elements: examples)
                         } else {
-                            Text("No examples found 😔")
+                            emptyText("examples")
                         }
                     }
                 }
@@ -66,33 +71,65 @@ struct WordDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .task {
-            await fetchData()
+            await fetchDetails()
         }
     }
     
-    private func fetchData() async {
+    private func fetchDetails() async {
+        word = wordEntity.word
+        pronunciation = wordEntity.pronunciation ?? ""
+        definitions = (wordEntity.definitions?.allObjects as? [DefinitionEntity])?.map { definitionEntity -> Definition in
+                .init(definition: definitionEntity.definition, partOfSpeech: definitionEntity.partOfSpeech)
+        } ?? []
+        await fetchSynonyms()
+        await fetchExamples()
+    }
+    
+    private func fetchSynonyms() async {
+        if let cachedSynonyms = storeProvider.fetchSynonyms(for: word), !cachedSynonyms.isEmpty {
+            synonyms = cachedSynonyms
+            return
+        }
+        
         do {
-            async let wordSynonyms = wordsData.fetchSynonyms(word.word)
-            async let wordExamples = wordsData.fetchExamples(word.word)
-            
-            synonyms = try await wordSynonyms.synonyms
-            examples = try await wordExamples.examples
+            let fetchedSynonyms = try await wordsData.fetchSynonyms(word)
+            synonyms = fetchedSynonyms.synonyms
+            storeProvider.saveSynonyms(fetchedSynonyms.synonyms, for: word)
         } catch {
             print("Error fetching data: \(error.localizedDescription)")
         }
     }
+    
+    private func fetchExamples() async {
+        if let cachedExamples = storeProvider.fetchExamples(for: word), !cachedExamples.isEmpty {
+            examples = cachedExamples
+            return
+        }
+        
+        do {
+            let fetchedExamples = try await wordsData.fetchExamples(word)
+            examples = fetchedExamples.examples
+            storeProvider.saveExamples(fetchedExamples.examples, for: word)
+        } catch {
+            print("Error fetching data: \(error.localizedDescription)")
+        }
+    }
+    
+    private func emptyText(_ text: String) -> some View {
+        Text("No \(text) found 😔")
+    }
 }
 
 struct WordDefinitionsView: View {
-    let word: Word
+    let definitions: [Definition]
     
     var body: some View {
-        ForEach(word.results) { result in
-            if let index = word.results.firstIndex(where: { $0.definition == result.definition }) {
+        ForEach(definitions) { result in
+            if let index = definitions.firstIndex(where: { $0.definition == result.definition }) {
                 DefinitionView(index: index,
-                                   definition: result.definition,
-                                   partOfSpeech: result.partOfSpeech)
-                if index < word.results.indices.last ?? 0 {
+                               definition: result.definition,
+                               partOfSpeech: result.partOfSpeech)
+                if index < definitions.indices.last ?? 0 {
                     Divider()
                 }
             }
@@ -176,6 +213,6 @@ struct DetailsPickerView: View {
 }
 
 #Preview {
-    let word = Word.sampleData[0]
-    WordDetailView(word: word)
+    WordDetailView(wordEntity: WordEntity.sampleWord)
+        .environmentObject(StoreProvider.preview)
 }

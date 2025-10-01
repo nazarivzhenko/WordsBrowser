@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24299" systemVersion="25A354" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="DefinitionEntity" representedClassName="DefinitionEntity" syncable="YES">
+        <attribute name="definition" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="partOfSpeech" optional="YES" attributeType="String"/>
+        <relationship name="word" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WordEntity" inverseName="definitions" inverseEntity="WordEntity"/>
+    </entity>
+    <entity name="ExampleEntity" representedClassName="ExampleEntity" syncable="YES">
+        <attribute name="example" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <relationship name="word" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WordEntity" inverseName="examples" inverseEntity="WordEntity"/>
+    </entity>
+    <entity name="SynonymEntity" representedClassName="SynonymEntity" syncable="YES">
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="synonym" optional="YES" attributeType="String"/>
+        <relationship name="word" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WordEntity" inverseName="synonyms" inverseEntity="WordEntity"/>
+    </entity>
+    <entity name="WordEntity" representedClassName="WordEntity" syncable="YES">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="pronunciation" optional="YES" attributeType="String"/>
+        <attribute name="word" optional="YES" attributeType="String"/>
+        <relationship name="definitions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DefinitionEntity" inverseName="word" inverseEntity="DefinitionEntity"/>
+        <relationship name="examples" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExampleEntity" inverseName="word" inverseEntity="ExampleEntity"/>
+        <relationship name="synonyms" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="SynonymEntity" inverseName="word" inverseEntity="SynonymEntity"/>
+    </entity>
+</model>
